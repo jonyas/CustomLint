@@ -2,6 +2,7 @@ package co.getpicks.lint
 
 import com.android.tools.lint.client.api.UElementHandler
 import com.android.tools.lint.detector.api.*
+import org.jetbrains.kotlin.idea.KotlinLanguage
 import org.jetbrains.uast.UMethod
 import org.jetbrains.uast.UastVisibility
 import java.util.*
@@ -29,17 +30,25 @@ class PublicMethodsWithCommentsDetector : Detector(), Detector.UastScanner {
     inner class PublicMethodsWithCommentsHandler(private val context: JavaContext) : UElementHandler() {
 
         override fun visitMethod(node: UMethod) {
+
             if (node.isConstructor == false
                     && node.isOverride == false
                     && node.visibility == UastVisibility.PUBLIC
-                    // node.comments && node.docComments is always empty. Bug??
-                    && node.text.startsWith("/**") == false) {
+                    && node.hasComments() == false) {
                 context.report(
                         ISSUE_PUBLIC_WITH_COMMENTS,
                         node,
                         context.getNameLocation(node),
                         "Method is not documented"
                 )
+            }
+        }
+
+        private fun UMethod.hasComments(): Boolean {
+            return when (this.language) {
+            // In kotlin comments or docComment is always empty
+                is KotlinLanguage -> this.text.startsWith("/**")
+                else -> this.docComment != null
             }
         }
     }
